@@ -1,6 +1,14 @@
 
+module "efs_sg_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["efs", "sg"]
+  context    = module.this.context
+}
+
 resource "aws_security_group" "efs" {
-  name   = "${var.prefix}-efs"
+  name   = module.efs_sg_label.id
   vpc_id = local.vpc_id
   ingress {
     from_port   = 2049
@@ -15,13 +23,21 @@ resource "aws_security_group" "efs" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = var.tags
+  tags = module.efs_sg_label.tags
+}
+
+module "efs_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["efs"]
+  context    = module.this.context
 }
 
 resource "aws_efs_file_system" "main" {
-  creation_token = "${var.prefix}-efs"
+  creation_token = module.efs_label.id
 
-  tags = var.tags
+  tags = module.efs_label.tags
 }
 
 resource "aws_efs_mount_target" "mount" {
@@ -49,5 +65,5 @@ resource "aws_efs_access_point" "access" {
     }
   }
 
-  tags = var.tags
+  tags = module.efs_label.tags
 }

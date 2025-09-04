@@ -1,11 +1,19 @@
+module "ecs_cluster_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["cluster"]
+  context    = module.this.context
+}
+
 resource "aws_ecs_cluster" "ecs" {
-  name = "${var.prefix}-cluster"
+  name = module.ecs_cluster_label.id
   setting {
     name  = "containerInsights"
     value = "disabled"
   }
 
-  tags = var.tags
+  tags = module.ecs_cluster_label.tags
 }
 
 resource "aws_ecs_cluster_capacity_providers" "main" {
@@ -18,15 +26,31 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
   }
 }
 
+module "logs_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["logs"]
+  context    = module.this.context
+}
+
 resource "aws_cloudwatch_log_group" "logs" {
-  name              = "${var.prefix}-logs"
+  name              = module.logs_label.id
   retention_in_days = 1
 
-  tags = var.tags
+  tags = module.logs_label.tags
+}
+
+module "taskdef_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["taskdef"]
+  context    = module.this.context
 }
 
 resource "aws_ecs_task_definition" "taskdef" {
-  family             = "${var.prefix}-taskdef"
+  family             = module.taskdef_label.id
   task_role_arn      = aws_iam_role.taskrole.arn
   execution_role_arn = aws_iam_role.executionrole.arn
   container_definitions = jsonencode([
@@ -85,11 +109,19 @@ resource "aws_ecs_task_definition" "taskdef" {
   cpu                      = 256
   memory                   = 512
 
-  tags = var.tags
+  tags = module.taskdef_label.tags
+}
+
+module "n8n_sg_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["sg"]
+  context    = module.this.context
 }
 
 resource "aws_security_group" "n8n" {
-  name   = "${var.prefix}-sg"
+  name   = module.n8n_sg_label.id
   vpc_id = local.vpc_id
   ingress {
     from_port = 5678
@@ -107,11 +139,19 @@ resource "aws_security_group" "n8n" {
     ipv6_cidr_blocks = ["::/0"]
   }
 
-  tags = var.tags
+  tags = module.n8n_sg_label.tags
+}
+
+module "service_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["service"]
+  context    = module.this.context
 }
 
 resource "aws_ecs_service" "service" {
-  name            = "${var.prefix}-service"
+  name            = module.service_label.id
   cluster         = aws_ecs_cluster.ecs.id
   task_definition = aws_ecs_task_definition.taskdef.arn
   desired_count   = var.desired_count
@@ -135,5 +175,5 @@ resource "aws_ecs_service" "service" {
     container_port   = 5678
   }
 
-  tags = var.tags
+  tags = module.service_label.tags
 }

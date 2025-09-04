@@ -1,5 +1,13 @@
+module "alb_sg_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["alb", "sg"]
+  context    = module.this.context
+}
+
 resource "aws_security_group" "alb" {
-  name   = "${var.prefix}-alb"
+  name   = module.alb_sg_label.id
   vpc_id = local.vpc_id
   ingress {
     from_port   = 80
@@ -20,22 +28,38 @@ resource "aws_security_group" "alb" {
     cidr_blocks = [local.vpc_cidr_block]
   }
 
-  tags = var.tags
+  tags = module.alb_sg_label.tags
+}
+
+module "alb_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["alb"]
+  context    = module.this.context
 }
 
 resource "aws_lb" "main" {
-  name                       = "${var.prefix}-alb"
+  name                       = module.alb_label.id
   internal                   = false
   load_balancer_type         = "application"
   security_groups            = [aws_security_group.alb.id]
   subnets                    = local.public_subnets
   enable_deletion_protection = false
 
-  tags = var.tags
+  tags = module.alb_label.tags
+}
+
+module "tg_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["tg"]
+  context    = module.this.context
 }
 
 resource "aws_lb_target_group" "ip" {
-  name                 = "${var.prefix}-tg"
+  name                 = module.tg_label.id
   port                 = 80
   deregistration_delay = 30
   protocol             = "HTTP"
@@ -49,7 +73,7 @@ resource "aws_lb_target_group" "ip" {
     path                = "/healthz"
   }
 
-  tags = var.tags
+  tags = module.tg_label.tags
 }
 
 resource "aws_lb_listener" "http" {
@@ -62,7 +86,7 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.ip.arn
   }
 
-  tags = var.tags
+  tags = module.alb_label.tags
 }
 
 resource "aws_lb_listener" "https" {
@@ -77,5 +101,5 @@ resource "aws_lb_listener" "https" {
     target_group_arn = aws_lb_target_group.ip.arn
   }
 
-  tags = var.tags
+  tags = module.alb_label.tags
 }

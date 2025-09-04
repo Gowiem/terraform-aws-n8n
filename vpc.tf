@@ -51,10 +51,18 @@ locals {
   )
 }
 
+module "vpc_label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
+
+  attributes = ["vpc"]
+  context    = module.this.context
+}
+
 module "vpc" {
   count              = var.vpc_id == null ? 1 : 0
   source             = "terraform-aws-modules/vpc/aws"
-  name               = "${var.prefix}-vpc"
+  name               = module.vpc_label.id
   cidr               = local.vpc_cidr
   azs                = local.azs
   private_subnets    = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k)]
@@ -62,5 +70,5 @@ module "vpc" {
   enable_nat_gateway = false
   enable_vpn_gateway = false
 
-  tags = var.tags
+  tags = module.vpc_label.tags
 }
